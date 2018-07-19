@@ -1,23 +1,22 @@
 
 # coding: utf-8
 
-from sys import argv
-
-script, filename = argv
-
-# In[2]:
-
-
-import pandas as pd
 import json
-import requests
-
+from sys import argv
 from urllib.parse import urlparse
 
-from tqdm import tqdm
+import pandas as pd
+import requests
+
+try:  # for notebooks
+    get_ipython
+    from tqdm._tqdm_notebook import tqdm_notebook as tqdm
+except:  # for commandline
+    from tqdm import tqdm
+tqdm.pandas()
 
 
-# In[3]:
+script, filename = argv
 
 
 tweets = pd.read_csv('queries/%s' % filename, sep='\t', header=None)
@@ -25,42 +24,39 @@ tweets.columns = ['tweet_id', 'tweet']
 tweets['tweet'] = tweets.tweet.map(json.loads)
 
 
-# In[4]:
-
-
 def get_tweet_urls(t):
-    try: 
+    try:
         return get_urls(t['entities']['urls'])
     except:
         return []
-    
+
+
 def get_retweet_urls(t):
-    try: 
+    try:
         return get_urls(t['retweeted_status']['entities']['urls'])
     except:
         return []
 
+
 def get_urls(urls):
-    try: 
-        urls = [v for (k,v) in urls[0].items() if k in ('url', 'expanded_url')]
+    try:
+        urls = [v for (k, v) in urls[0].items()
+                if k in ('url', 'expanded_url')]
         return list(set(urls))
     except:
         return []
-    
+
+
 tweets['tweet_urls'] = tweets.tweet.map(get_tweet_urls)
 tweets['retweet_urls'] = tweets.tweet.map(get_retweet_urls)
-
-
-# In[5]:
 
 
 def match_urls(urls, to_match):
     return [url for url in urls if to_match in url]
 
-tweets['relevant_urls'] = tweets.apply(lambda row: match_urls(row['tweet_urls']+row['retweet_urls'], 'globe'), axis=1)
 
-
-# In[6]:
+tweets['relevant_urls'] = tweets.apply(lambda row: match_urls(
+    row['tweet_urls']+row['retweet_urls'], 'globe'), axis=1)
 
 
 def clean_url(url):
@@ -72,21 +68,19 @@ def clean_url(url):
     except:
         raise
 
-tweets['relevant_urls'] = tweets.relevant_urls.map(lambda urls: list(set([clean_url(url) for url in urls])))
-tweets['clean_url'] = tweets.relevant_urls.map(lambda x: x[0] if len(x) > 0 else '')
 
-
-# In[7]:
+tweets['relevant_urls'] = tweets.relevant_urls.map(
+    lambda urls: list(set([clean_url(url) for url in urls])))
+tweets['clean_url'] = tweets.relevant_urls.map(
+    lambda x: x[0] if len(x) > 0 else '')
 
 
 no_relevant = tweets[tweets.relevant_urls.map(len) == 0]
-shortened_urls = set(no_relevant.tweet_urls.sum() + no_relevant.retweet_urls.sum())
+shortened_urls = set(no_relevant.tweet_urls.sum() +
+                     no_relevant.retweet_urls.sum())
 shortened_urls = [url for url in shortened_urls if 'twitter.com' not in url]
 
 print(len(shortened_urls))
-
-
-# In[8]:
 
 
 with open('shortened_urls.txt', 'w') as f:
@@ -95,51 +89,37 @@ with open('shortened_urls.txt', 'w') as f:
         f.write('%s\n' % url)
 
 
-# In[9]:
-
-
 resolved_urls = pd.read_csv('resolved_urls.csv')
 resolved_urls.dropna(subset=['url'], inplace=True)
 resolved_urls = resolved_urls.set_index('short_url').to_dict()['url']
-
-
-# In[10]:
 
 
 def expand_urls(urls):
     global resolved_urls
     return [resolved_urls[url] for url in urls if url in resolved_urls]
 
-tweets['expanded_tweet_urls'] = tweets.apply(lambda row: expand_urls(row['tweet_urls']) if len(row['relevant_urls']) == 0 else [], axis=1)
-tweets['expanded_retweet_urls'] = tweets.apply(lambda row: expand_urls(row['retweet_urls']) if len(row['relevant_urls']) == 0 else [], axis=1) 
+
+tweets['expanded_tweet_urls'] = tweets.apply(lambda row: expand_urls(
+    row['tweet_urls']) if len(row['relevant_urls']) == 0 else [], axis=1)
+tweets['expanded_retweet_urls'] = tweets.apply(lambda row: expand_urls(
+    row['retweet_urls']) if len(row['relevant_urls']) == 0 else [], axis=1)
 
 
-# In[11]:
+tweets['expanded_relevant_urls'] = tweets.apply(lambda row: match_urls(
+    row['expanded_tweet_urls']+row['expanded_retweet_urls'], 'globe'), axis=1)
 
 
-tweets['expanded_relevant_urls'] = tweets.apply(lambda row: match_urls(row['expanded_tweet_urls']+row['expanded_retweet_urls'], 'globe'), axis=1)
-
-
-# In[12]:
-
-
-tweets['expanded_relevant_urls'] = tweets.expanded_relevant_urls.map(lambda urls: list(set([clean_url(url) for url in urls])))
-tweets['expanded_clean_url'] = tweets.expanded_relevant_urls.map(lambda x: x[0] if len(x) > 0 else '')
-
-
-# In[13]:
+tweets['expanded_relevant_urls'] = tweets.expanded_relevant_urls.map(
+    lambda urls: list(set([clean_url(url) for url in urls])))
+tweets['expanded_clean_url'] = tweets.expanded_relevant_urls.map(
+    lambda x: x[0] if len(x) > 0 else '')
 
 
 tweets.clean_url.map(lambda x: len(x) > 0).sum()
 
 
-# In[14]:
-
-
-tweets['clean_url'] = tweets.apply(lambda row: row['clean_url'] if len(row['clean_url']) > 0 else row['expanded_clean_url'], axis=1)
-
-
-# In[15]:
+tweets['clean_url'] = tweets.apply(lambda row: row['clean_url'] if len(
+    row['clean_url']) > 0 else row['expanded_clean_url'], axis=1)
 
 
 # def get_linked_tweet(urls):
@@ -151,14 +131,11 @@ tweets['clean_url'] = tweets.apply(lambda row: row['clean_url'] if len(row['clea
 #     except:
 #         pass
 #     return 0
-    
+
 # tweets['link_to_tweet'] = tweets.apply(lambda row: get_linked_tweet(row['tweet_urls'] + row['retweet_urls']), axis=1)
 
 # # sometimes the tweet link is to itself. Set to 0
 # tweets['link_to_tweet'] = tweets.apply(lambda row: row['link_to_tweet'] if row['link_to_tweet'] != row['tweet_id'] else 0, axis=1)
-
-
-# In[16]:
 
 
 # Try ths again after finding more relevant URLs. This is currently not yielding anything.
@@ -169,9 +146,6 @@ tweets['clean_url'] = tweets.apply(lambda row: row['clean_url'] if len(row['clea
 # df2 = tweets.merge(df, left_on='link_to_tweet', right_on='tweet_id', how='left')
 
 
-# In[30]:
-
-
 # # mentions = pd.read_excel('theglobeandmail.xlsx')
 # mentions = pd.read_excel('News_mentions_2017.xlsx')
 # mentions = mentions[['Altmetric_ID', 'Url']]
@@ -179,4 +153,3 @@ tweets['clean_url'] = tweets.apply(lambda row: row['clean_url'] if len(row['clea
 # mentions.sample(10)
 # df = tweets.merge(mentions, left_on='clean_url', right_on='clean_url', how='left')
 # len(df.Altmetric_ID.unique())
-

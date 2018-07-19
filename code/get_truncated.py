@@ -1,17 +1,15 @@
-import tweepy
-import pandas as pd
+import configparser
+import gc
 import json
-import requests
-
+import os.path
+from pathlib import Path
 from urllib.parse import urlparse
 
+import pandas as pd
+import requests
+import tweepy
 from tqdm import tqdm
 
-import os.path
-
-import gc 
-
-import configparser
 Config = configparser.ConfigParser()
 Config.read('config.cnf')
 
@@ -25,12 +23,17 @@ auth.set_access_token(access_token, access_token_secret)
 # set up access to the Twitter API
 api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
 
-with open('queries/queryInfo.txt', 'r') as queries:
+
+data_dir = Path("../data/")
+queries = data_dir / "queries"
+
+
+with open(str(queries / 'queryInfo.txt'), 'r') as queries:
     queries.readline()
     for f in queries: 
         query = f.split('\t')[0]
         relevant = query.split(' ')[0]
-        if 'boston' in relevant:
+        if 'wired' in relevant:
             break
 
 tweets = pd.read_csv('queries/%s.txt' % query, sep='\t', header=None)

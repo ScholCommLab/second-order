@@ -1,12 +1,11 @@
 # coding: utf-8
 import datetime
-import requests
-import pandas as pd
-
-from tqdm import tqdm
-
 from concurrent.futures import ProcessPoolExecutor
+
+import pandas as pd
+import requests
 from requests_futures.sessions import FuturesSession
+from tqdm import tqdm
 
 # Read input file
 df = pd.read_csv("shortened_urls.txt")
