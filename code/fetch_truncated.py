@@ -88,8 +88,6 @@ if __name__ == "__main__":
     sorted_files = sorted(row_counts.items(), key=operator.itemgetter(1))
 
     for filename, rows in sorted_files:
-        if "chicago" not in filename:
-            continue
         # Skip if file doesn't exist
         query_file = input_dir / filename
         if not query_file.exists():
