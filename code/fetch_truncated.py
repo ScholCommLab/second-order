@@ -1,6 +1,5 @@
 import configparser
 import csv
-import gc
 import json
 import operator
 import os.path
@@ -19,32 +18,6 @@ except:  # for commandline
     from tqdm import tqdm
 tqdm.pandas()
 
-Config = configparser.ConfigParser()
-Config.read('../config.cnf')
-
-consumer_key = Config.get('twitter_keys', 'consumer_key')
-consumer_secret = Config.get('twitter_keys', 'consumer_secret')
-access_token = Config.get('twitter_keys', 'access_token')
-access_token_secret = Config.get('twitter_keys', 'access_token_secret')
-
-auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_token, access_token_secret)
-# set up access to the Twitter API
-api = tweepy.API(auth, wait_on_rate_limit=True, wait_on_rate_limit_notify=True)
-
-
-data_dir = Path("../data/")
-queries_dir = data_dir / "queries/"
-output = data_dir / "refetched/"
-
-row_counts = {}
-with open(str(queries_dir / 'row_counts.txt')) as f:
-    reader = csv.reader(f, delimiter='\t')
-    for row in reader:
-        row_counts[row[0]] = int(row[1])
-
-sorted_files = sorted(row_counts.items(), key=operator.itemgetter(1))
-
 
 def load_json(x):
     try:
@@ -53,60 +26,105 @@ def load_json(x):
         print("Problematic tweet found.")
         return None
 
-for filename, rows in sorted_files:
-    query_file = queries_dir / filename
-    if not query_file.exists():
-        continue
 
-    filebase = filename.split(".txt")[0]
-    outfile = output / (filebase + ".csv")
+def refetch_tweet(tweet):
+    # If truncated fetch new tweet
+    refetched = False
+    error = None
+    if tweet['truncated']:
+        try:
+            status = api.get_status(tweet['id_str'], tweet_mode='extended')
+            tweet = status._json
+            refetched = True
+        except tweepy.TweepError as e:
+            error = str(e)
 
-    headers = ['tweet_id', 'posted_on', 'tweet', 'truncated', 'refetched', 'error', 'retweet_id', 'retweet_truncated']
+    tweet_id = tweet['id_str']
+    created_at = parse(tweet['created_at'], ignoretz=True)
+    truncated = tweet['truncated']
+    retweet_id = None
+    retweet_truncated = None
 
-    skip_header = False
-    if outfile.exists():
-        skip_header = True
+    if 'retweeted_status' in tweet:
+        retweet_id = tweet['retweeted_status']['id_str']
+        if tweet['retweeted_status']['truncated']:
+            retweet_truncated = True
+        else:
+            retweet_truncated = False
 
-    print("Collecting {}".format(filebase))
-    with open(str(query_file), "r") as infile:
-        with open(str(outfile), "a") as outfile:
-            reader = csv.reader(infile, delimiter='\t')
-            writer = csv.writer(outfile)
+    row = [tweet_id, created_at, json.dumps(
+        tweet), truncated, refetched, error, retweet_id, retweet_truncated]
+    return row
 
-            if not skip_header:
-                writer.writerow(headers)
 
-            for row in tqdm(reader, total=rows):
-                tweet_id = row[0]
-                tweet = load_json(row[1])
+if __name__ == "__main__":
+    # Load config
+    Config = configparser.ConfigParser()
+    Config.read('../config.cnf')
 
-                if not tweet:
-                    continue
+    consumer_key = Config.get('twitter_keys', 'consumer_key')
+    consumer_secret = Config.get('twitter_keys', 'consumer_secret')
+    access_token = Config.get('twitter_keys', 'access_token')
+    access_token_secret = Config.get('twitter_keys', 'access_token_secret')
 
-                min_date = datetime(2016, 9, 1)
-                max_date = datetime(2017, 9, 1)
+    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+    auth.set_access_token(access_token, access_token_secret)
+    # set up access to the Twitter API
+    api = tweepy.API(auth, wait_on_rate_limit=True,
+                     wait_on_rate_limit_notify=True)
 
-                created_at = parse(tweet['created_at'], ignoretz=True)
-                if (created_at >= min_date) & (created_at < max_date):
-                    retweet_id = None
-                    retweet_truncated = False
-                    truncated = False
-                    status = None
-                    refetched = False
-                    error = None
+    # Directories
+    data_dir = Path("../data/")
+    input_dir = data_dir / "queries/"
+    output_dir = data_dir / "refetched/"
 
-                    if tweet['truncated']:
-                        truncated = True
-                        try:
-                            status = api.get_status(tweet_id, tweet_mode='extended')
-                            refetched = True
-                        except tweepy.TweepError as e:
-                            error = str(e)
+    # Load row counts for each input file
+    row_counts = {}
+    with open(str(input_dir / 'row_counts.txt')) as f:
+        reader = csv.reader(f, delimiter='\t')
+        for row in reader:
+            row_counts[row[0]] = int(row[1])
 
-                    if 'retweeted_status' in tweet:
-                        retweet_id = tweet['retweeted_status']['id_str']
-                        if tweet['retweeted_status']['truncated']:
-                            retweet_truncated = True
+    sorted_files = sorted(row_counts.items(), key=operator.itemgetter(1))
 
-                    row = [tweet_id, created_at, json.dumps(tweet), truncated, refetched, error, retweet_id, retweet_truncated]
-                    writer.writerow(row)
+    for filename, rows in sorted_files:
+        if "chicago" not in filename:
+            continue
+        # Skip if file doesn't exist
+        query_file = input_dir / filename
+        if not query_file.exists():
+            continue
+
+        filebase = filename.split(".txt")[0]
+        outfile = output_dir / (filebase + ".csv")
+
+        headers = ['tweet_id', 'posted_on', 'tweet', 'truncated', 'refetched',
+                   'error', 'retweet_id', 'retweet_truncated']
+
+        # Don't write headers if file already exists
+        skip_header = False
+        if outfile.exists():
+            skip_header = True
+
+        print("Collecting {}".format(filebase))
+        with open(str(query_file), "r") as infile:
+            with open(str(outfile), "a") as outfile:
+                reader = csv.reader(infile, delimiter='\t')
+                writer = csv.writer(outfile)
+
+                if not skip_header:
+                    writer.writerow(headers)
+
+                for row in tqdm(reader, total=rows):
+                    tweet = load_json(row[1])
+
+                    if not tweet:
+                        continue
+
+                    min_date = datetime(2016, 9, 1)
+                    max_date = datetime(2017, 9, 1)
+                    created_at = parse(tweet['created_at'], ignoretz=True)
+
+                    if (created_at >= min_date) & (created_at < max_date):
+                        row = refetch_tweet(tweet)
+                        writer.writerow(row)
