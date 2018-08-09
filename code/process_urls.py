@@ -76,11 +76,7 @@ def clean_url(url):
         up = urlparse(url)
         domain = '.'.join(up.netloc.split('.')[-2:]).strip()
         path = up.path.strip('/').strip()
-        query = up.query
-        if query:
-            return '{}/{}?{}'.format(domain, path, query)
-        else:
-            return '{}/{}'.format(domain, path)
+        return '{}/{}'.format(domain, path)
     except:
         raise
 
