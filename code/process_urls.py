@@ -77,7 +77,10 @@ def clean_url(url):
         domain = '.'.join(up.netloc.split('.')[-2:]).strip()
         path = up.path.strip('/').strip()
         query = up.query
-        return '{}{}?{}'.format(domain, path, query)
+        if query:
+            return '{}/{}?{}'.format(domain, path, query)
+        else:
+            return '{}/{}'.format(domain, path)
     except:
         raise
 
@@ -100,6 +103,9 @@ def expand_urls(urls, session, timeout=5):
 
 
 class PublisherException(Exception):
+    '''
+    User Exception Class to handle requests to big publishers
+    '''
     pass
 
 
@@ -112,7 +118,11 @@ def too_many_publ_requests(urls):
     return publisher_count > 100
 
 
-def get_clean_url(tweet):
+def get_expanded_urls(tweet):
+    '''
+    Get tweeted and retweeted URLs and try to identify relevant ones.
+    Also expands shortened URls
+    '''
     # Get tweet & retweet URLs
     tweet_urls = get_tweet_urls(tweet)
     retweet_urls = get_retweet_urls(tweet)
@@ -122,7 +132,8 @@ def get_clean_url(tweet):
 
     if len(relevant_urls) == 0:
         shortened_urls = set(tweet_urls + retweet_urls)
-        shortened_urls = [url for url in shortened_urls if 'twitter.com' not in url]
+        shortened_urls = [
+            url for url in shortened_urls if 'twitter.com' not in url]
 
         relevant_urls = expand_urls(tweet_urls+retweet_urls, session)
 
@@ -130,13 +141,19 @@ def get_clean_url(tweet):
         if too_many_publ_requests(relevant_urls):
             raise PublisherException("Too many publisher URLs")
 
+    return relevant_urls
+
+
+def select_cleaned_url(relevant_urls):
+    '''
+    Clean all URLs and select one of the expanded ones
+    '''
     # clean all urls
     relevant_urls = list(set([clean_url(url) for url in relevant_urls]))
 
     # check if news_name in url
     relevant_urls = [url for url in relevant_urls if relevant_string in url]
 
-    # return first
     return relevant_urls[0] if len(relevant_urls) > 0 else ''
 
 
@@ -169,7 +186,7 @@ if __name__ == "__main__":
 
         # CSV for the final map
         outfile = output_dir / filename
-        outfile_headers = ['tweet_id', 'cleaned_url']
+        outfile_headers = ['tweet_id', 'expanded_urls', 'relevant_url']
 
         # If file already exists, headers are not written
         skip_header = False
@@ -213,8 +230,10 @@ if __name__ == "__main__":
                         continue
 
                     try:
-                        cleaned_url = get_clean_url(tweet)
-                        writer.writerow([str(tweet_id), cleaned_url])
+                        expanded_urls = get_expanded_urls(tweet)
+                        relevant_url = select_cleaned_url(expanded_urls)
+
+                        writer.writerow([str(tweet_id), str(relevant_urls), relevant_url])
                     except PublisherException:
                         print("Too many requests to publishers")
                         sys.exit(0)
