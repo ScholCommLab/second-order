@@ -172,9 +172,6 @@ if __name__ == "__main__":
     publisher_count = 0
 
     for filename, rows in sorted_files:
-        if 'chicago' not in filename:
-            continue
-
         # Try to load current input file
         query_file = input_dir / filename
         if not query_file.exists():
