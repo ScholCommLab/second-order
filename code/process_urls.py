@@ -229,7 +229,7 @@ if __name__ == "__main__":
                         expanded_urls = get_expanded_urls(tweet)
                         relevant_url = select_cleaned_url(expanded_urls)
 
-                        writer.writerow([str(tweet_id), str(relevant_urls), relevant_url])
+                        writer.writerow([str(tweet_id), str(expanded_urls), relevant_url])
                     except PublisherException:
                         print("Too many requests to publishers")
                         sys.exit(0)
