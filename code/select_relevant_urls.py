@@ -231,5 +231,5 @@ if __name__ == "__main__":
                         print("Too many requests to publishers")
                         sys.exit(0)
         
-    with open(str(output_dir / "expanded_urls.csv"), 'a') as f:
+    with open(str(output_dir / "expanded_urls.csv"), 'w') as f:
         expanded_urls_df.to_csv(f, header=False)
