@@ -92,7 +92,7 @@ class TooManyPublisherRequests(Exception):
 class PublisherTracker(object):
     def __init__(self):
         self.count = 0
-        self.max = 100
+        self.max = 300
         self.publishers = ['elsevier', 'springer', 'amc']
 
     def check_url(self, url):
@@ -104,7 +104,7 @@ class PublisherTracker(object):
 
 
 @sleep_and_retry
-@limits(calls=10, period=1)
+@limits(calls=30, period=1)
 def resolve_url(url, session, timeout=5):
     try:
         resp = session.get(url, allow_redirects=True, timeout=timeout)
@@ -113,28 +113,38 @@ def resolve_url(url, session, timeout=5):
         return None, e
 
 
-def expand_urls(tweet_id, urls, session, expanded_urls, relevant_string, pub_tracker):
+def expand_urls(tweet_id, urls, session, expanded_urls_df, exp_writer, relevant_string, pub_tracker):
     '''
     Expand all URLs.
     '''
     try:
         for url in urls:
-            if url in expanded_urls_df.index.tolist():
-                if expanded_urls_df.loc[url].error == "None":
-                    resolved_url = expanded_urls_df[url]
+            if url in expanded_urls_df.keys():
+                if expanded_urls_df[url]['error'] == "None":
+                    resolved_url = expanded_urls_df[url]['resolved_url']
                     error = None
+                    return resolved_url
                 else:
                     resolved_url, error = resolve_url(url, session)
             else:
                 resolved_url, error = resolve_url(url, session)
 
-            expanded_urls_df.loc[url] = [tweet_id, resolved_url, error, str(datetime.now())]
+            now = str(datetime.now())
+
+            expanded_urls_df[url] = {
+                'tweet_id': tweet_id,
+                'venue': relevant_string,
+                'resolved_url': resolved_url,
+                'error': error,
+                'timestamp': now
+            }
+
+            exp_writer.writerow([url, tweet_id, relevant_string, resolved_url, error, now])
 
             if resolved_url:
                 pub_tracker.check_url(url)
                 if match_urls([resolved_url], relevant_string):
                     return resolved_url
-
     except TooManyPublisherRequests:
         raise
 
@@ -154,82 +164,77 @@ if __name__ == "__main__":
     pub_tracker = PublisherTracker()
 
     # keep track of urls that were already expanded
-    col_names = ['tweet_id', 'resolved_url', 'error', 'timestamp']
-    expanded_urls_df = pd.DataFrame(columns=col_names)
-    expanded_urls_df.index.name = 'short_url'
+    col_names = ['tweet_id', 'venue', 'resolved_url', 'error', 'timestamp']
+    expanded_urls_df = {}
 
     with open(str(output_dir / "expanded_urls.csv"), 'w') as f:
-        writer = csv.writer(f)
-        writer.writerow(['short_url'] + col_names)
+        exp_writer = csv.writer(f)
+        exp_writer.writerow(['short_url'] + col_names)
 
-    # Sort files from small to big
-    sorted_files = sorted(row_counts.items(), key=operator.itemgetter(1))
-    for filename, rows in sorted_files:
-        # Try to load current input file
-        query_file = input_dir / filename
-        if not query_file.exists():
-            continue
+        # Sort files from small to big
+        sorted_files = sorted(row_counts.items(), key=operator.itemgetter(1))
+        for filename, rows in sorted_files:
+            query_file = input_dir / filename
+            if not query_file.exists():
+                continue
 
-        # CSV for the final map
-        outfile = output_dir / filename
-        outfile_headers = ['tweet_id', 'relevant_url', 'cleaned_url']
+            # CSV for the final map
+            outfile = output_dir / filename
+            outfile_headers = ['tweet_id', 'relevant_url', 'cleaned_url', 'expanded']
 
-        # If file already exists, headers are not written
-        skip_header = False
-        if outfile.exists():
-            skip_header = True
+            # If file already exists, headers are not written
+            skip_header = False
+            if outfile.exists():
+                skip_header = True
 
-        # Create a requests session to be re-used throughout the script
-        session = requests.Session()
+            # Create a requests session to be re-used throughout the script
+            session = requests.Session()
 
-        # Search string and filename
-        relevant_string = filename.split(" ")[0]
-        if relevant_string == "chicago":
-            relevant_string = "suntimes"
+            # Search string and filename
+            relevant_string = filename.split(" ")[0]
+            if relevant_string == "chicago":
+                relevant_string = "suntimes"
 
-        print("Processing {}".format(filename))
-        with open(str(query_file), "r") as infile:
-            # CSV columns: tweet_id, posted_on, tweet, truncated,
-            #              refetched, error, retweet_id, retweet_truncated
-            with open(str(outfile), "w") as outfile:
-                reader = csv.reader(infile)
-                next(reader, None)  # skip headers
-            
-                writer = csv.writer(outfile)
-                if not skip_header:
-                    writer.writerow(outfile_headers)
+            print("Processing {}".format(filename))
+            with open(str(query_file), "r") as infile:
+                with open(str(outfile), "w") as outfile:
+                    reader = csv.reader(infile)
+                    next(reader, None)  # skip headers
                 
-                for row in tqdm(reader, total=rows):
-                    tweet_id = row[0]
-                    tweet = load_json(row[2])
+                    writer = csv.writer(outfile)
+                    if not skip_header:
+                        writer.writerow(outfile_headers)
+                    
+                    for row in tqdm(reader, total=rows-1):
+                        tweet_id = row[0]
+                        tweet = load_json(row[2])
 
-                    # Skip if there's no tweet
-                    if not tweet:
-                        continue
+                        # Skip if there's no tweet
+                        if not tweet:
+                            continue
 
-                    try:
-                        # Get tweet & retweet URLs
-                        tweet_urls = get_tweet_urls(tweet)
-                        retweet_urls = get_retweet_urls(tweet)
-                        urls = set(tweet_urls + retweet_urls)
+                        try:
+                            # Get tweet & retweet URLs
+                            tweet_urls = get_tweet_urls(tweet)
+                            retweet_urls = get_retweet_urls(tweet)
+                            urls = set(tweet_urls + retweet_urls)
 
-                        # Match with the selected news venue
-                        relevant_urls = match_urls(urls, relevant_string)
-                        
-                        if len(relevant_urls) > 0:
-                            relevant_url = relevant_urls[0]
-                        else:
-                            # remove URL that contain 'twitter.com'
-                            urls = [
-                                url for url in urls if 'twitter.com' not in url]
+                            # Match with the selected news venue
+                            relevant_urls = match_urls(urls, relevant_string)
+                            
+                            if len(relevant_urls) > 0:
+                                relevant_url = relevant_urls[0]
+                                expanded = False
+                            else:
+                                # remove URL that contain 'twitter.com'
+                                urls = [
+                                    url for url in urls if 'twitter.com' not in url]
 
-                            relevant_url = expand_urls(tweet_id, urls, session, expanded_urls_df, relevant_string, pub_tracker)
+                                relevant_url = expand_urls(tweet_id, urls, session, expanded_urls_df, exp_writer, relevant_string, pub_tracker)
+                                expanded = True
 
-                        writer.writerow(
-                            [str(tweet_id), str(relevant_url), clean_url(relevant_url)])
-                    except TooManyPublisherRequests:
-                        print("Too many requests to publishers")
-                        sys.exit(0)
-        
-    with open(str(output_dir / "expanded_urls.csv"), 'w') as f:
-        expanded_urls_df.to_csv(f, header=False)
+                            writer.writerow([str(tweet_id), str(relevant_url), clean_url(relevant_url), expanded])
+
+                        except TooManyPublisherRequests:
+                            print("Too many requests to publishers")
+                            sys.exit(0)
