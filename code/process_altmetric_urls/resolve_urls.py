@@ -10,7 +10,7 @@ except:  # for commandline
 tqdm.pandas()
 
 
-def resolve_url(url, session, timeout=5):
+def resolve_url(url, session, timeout=10):
     try:
         resp = session.head(url, allow_redirects=True, timeout=timeout)
         return resp.url, None
