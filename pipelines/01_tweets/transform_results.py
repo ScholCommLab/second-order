@@ -17,6 +17,8 @@ Output: ['tweet_id', 'posted_on', 'user_id', 'retweeted_status',
 
 import csv
 from pathlib import Path
+from tqdm import tqdm
+from dateutil.parser import parse
 
 from helpers import *
 
@@ -27,9 +29,6 @@ if __name__ == "__main__":
     output_cols = ['tweet_id', 'posted_on', 'user_id', 'retweeted_status',
                    'quoted_status', 'in_reply_to', 'urls', 'is_truncated',
                    'refetched', 'error']
-
-    # Load files from disk
-    queries = load_queries("../../data/queries.csv")
 
     data_dir = Path("../../data/")
     input_dir = data_dir / "refetched_tweets_old/"
@@ -44,9 +43,6 @@ if __name__ == "__main__":
             print("{} already exists. skipping".format(outfile))
             continue
 
-        q = infile.name.split(".")[0]
-        row_count = queries.loc[queries['query'] == q, "found_tweets"].iloc[0]
-
         print("Collecting {}".format(infile.name))
         with open(str(infile), "r") as inf:
             with open(str(outfile), "a") as outf:
@@ -56,7 +52,7 @@ if __name__ == "__main__":
                 writer = csv.writer(outf)
                 writer.writerow(output_cols)
 
-                for row in tqdm(reader, total=row_count):
+                for row in tqdm(reader):
                     tweet = load_json(row[input_cols.index('tweet')])
 
                     if not tweet:
