@@ -76,17 +76,19 @@ if __name__ == "__main__":
             print("{} already exists. skipping".format(outfile))
             continue
 
+        query_name = infile.name.split(".")[0]
+        row_count = queries.loc[queries['query'] == query_name, "found_tweets"].iloc[0]
+
         print("Collecting {}".format(infile.name))
         with open(str(infile), "r") as inf:
             with open(str(outfile), "a") as outf:
                 reader = csv.reader(inf)
                 next(reader, None)
-                
+
                 writer = csv.writer(outf)
                 writer.writerow(headers)
 
-                query_name = infile.name.split(".")[0]
-                row_count = queries.loc[queries['query'] == query_name, "found_tweets"].iloc[0]
+                
 
                 for row in tqdm(reader, total=row_count):
                     tweet = load_json(row[1])
@@ -94,22 +96,33 @@ if __name__ == "__main__":
                     if not tweet:
                         continue
 
-                    tweet_id = tweet['id_str']
-                    posted_on = parse(tweet['created_at'], ignoretz=True)
-                    user_id = tweet['user']['id_str']
+                    tweet_id = str(tweet['id_str'])
+                    posted_on = str(parse(tweet['created_at'], ignoretz=True))
+                    user_id = str(tweet['user']['id_str'])
+                    is_truncated = str(tweet['truncated'])
+
+                    urls = get_tweet_urls(tweet)
+                    if len(urls) > 0:
+                        urls = str(urls)
+                    else:
+                        urls = None
+
                     if 'retweeted_status' in tweet:
-                        retweeted_status = tweet['retweeted_status']['id_str']
+                        retweeted_status = str(tweet['retweeted_status']['id_str'])
                     else:
                         retweeted_status = None
-                    if tweet['is_quote_status']:
-                        quoted_status = tweet['quoted_status_id_str']
+
+                    if 'quoted_status_id_str' in tweet:
+                        quoted_status = str(tweet['quoted_status_id_str'])
                     else:
                         quoted_status = None
-                    in_reply_to = tweet['in_reply_to_status_id_str']
-                    urls = get_tweet_urls(tweet)
-                    is_truncated = tweet['truncated']
 
-                    row = [str(tweet_id), str(posted_on), str(user_id), str(retweeted_status),
-                           str(quoted_status), str(in_reply_to), str(urls), is_truncated]
+                    if tweet['in_reply_to_status_id_str']:
+                        in_reply_to = str(tweet['in_reply_to_status_id_str'])
+                    else:
+                        in_reply_to = None
+
+                    row = [tweet_id, posted_on, user_id, retweeted_status,
+                           quoted_status, in_reply_to, urls, is_truncated]
 
                     writer.writerow(row)
