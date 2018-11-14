@@ -54,7 +54,7 @@ if __name__ == "__main__":
                 next(reader, None)
 
                 writer = csv.writer(outf)
-                writer.writerow(outcols)
+                writer.writerow(output_cols)
 
                 for row in tqdm(reader, total=row_count):
                     tweet = load_json(row[input_cols.index('tweet')])
