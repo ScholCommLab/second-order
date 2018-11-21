@@ -106,14 +106,11 @@ if __name__ == "__main__":
     Config.read(str(root / 'config.cnf'))
 
     # Load files from disk
-    tweets = str(root / Config.get('output_files', 'summary_tweets'))
-    tweets = pd.read_csv(tweets)
-
     queries = str(root / Config.get('input_files', 'queries'))
-    queries = load_queries(queries)
+    queries = load_queries(str(queries))
 
     input_files = root / Config.get('output_files', 'tweets')
-
+    
     # Expanded URLs
     logger.info("Trying to load previously expanded URLs and prepare file stream")
     try:
