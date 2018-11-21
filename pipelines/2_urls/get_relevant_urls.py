@@ -76,9 +76,9 @@ exp_url_headers = ['short_url', 'resolved_url', 'error', 'timestamp']
 
 # Local files
 output_dir = Path("temp/")
-exp_file = str(output_dir / "expanded_urls.csv")
-pub_tracker_file = str(output_dir / "publisher_requests.csv")
-log_file = str(output_dir / "log.txt")
+exp_file = output_dir / "expanded_urls.csv"
+pub_tracker_file = output_dir / "publisher_requests.csv"
+log_file = output_dir / "log.txt"
 
 # Setup logger
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
@@ -113,12 +113,12 @@ if __name__ == "__main__":
 
     # Expanded URLs
     logger.info("Trying to load previously expanded URLs and prepare file stream")
-    try:
-        exp = pd.read_csv("expanded_urls.csv", index_col="id")
-    except:
+    if exp_file.exists():
+        exp = pd.read_csv(str(exp_file), index_col="id")
+    else:
         exp = pd.DataFrame(columns=exp_url_headers)
         exp.index.name = "id"
-        exp.to_csv(exp_file, index=True)
+        exp.to_csv(str(exp_file), index=True)
 
     # Init publication tracker
     pub_tracker = PublisherTracker()
