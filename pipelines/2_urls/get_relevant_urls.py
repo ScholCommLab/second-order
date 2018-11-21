@@ -120,6 +120,9 @@ if __name__ == "__main__":
         exp.index.name = "id"
         exp.to_csv(str(exp_file), index=True)
 
+    g_resolved_urls = set(exp[exp.error.isnull()].index.tolist())
+    b_resolved_urls = set(exp[exp.error.notnull()].index.tolist())
+
     # Init publication tracker
     pub_tracker = PublisherTracker()
 
@@ -198,23 +201,29 @@ if __name__ == "__main__":
 
                 if not found_url:
                     for url in url_candidates:
-                        if url in exp.short_url.tolist():
+                        if url in g_resolved_urls:
                             df = exp[exp.short_url == url]
                             df = df[df['error'].isnull()]
-                            if len(df) == 0:
-                                logger.debug("Resolving URL that previously failed.")
-                                r_url, error = resolve_url(url, session)
-                                exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
-                                with open(str(exp_file), 'a') as f:
-                                    exp_writer = csv.writer(f)
-                                    exp_writer.writerow(
-                                        [len(exp), url, r_url, error, str(datetime.now())])
-                                url = r_url
-                            else:
-                                url = df.iloc[0]["resolved_url"]
+                            url = df.iloc[0]["resolved_url"]
+                        elif url in b_resolved_urls:
+                            logger.debug("Resolving URL that previously failed.")
+                            r_url, error = resolve_url(url, session)
+                            if not error:
+                                g_resolved_urls.add(url)
+                                b_resolved_urls.remove(url)
+                            exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
+                            with open(str(exp_file), 'a') as f:
+                                exp_writer = csv.writer(f)
+                                exp_writer.writerow(
+                                    [len(exp), url, r_url, error, str(datetime.now())])
+                            url = r_url                              
                         else:
                             logger.debug("New URL. Resolving.")
                             r_url, error = resolve_url(url, session)
+                            if not error:
+                                g_resolved_urls.add(url)
+                            else:
+                                b_resolved_urls.add(url)
                             exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
                             with open(str(exp_file), 'a') as f:
                                 exp_writer = csv.writer(f)
