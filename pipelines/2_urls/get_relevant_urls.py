@@ -199,8 +199,8 @@ if __name__ == "__main__":
                 if not found_url:
                     for url in url_candidates:
                         if url in exp.index.tolist():
-                            df = exp.loc[url]
-                            df = df[df.error.isnull()]
+                            df = exp[exp.index == url]
+                            df = df[df['error'].isnull()]
                             if len(df) == 0:
                                 logger.debug("Resolving URL that previously failed.")
                                 r_url, error = resolve_url(url, session)
