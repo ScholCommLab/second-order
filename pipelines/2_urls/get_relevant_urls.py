@@ -88,7 +88,7 @@ logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-fh = logging.FileHandler(log_file)
+fh = logging.FileHandler(str(log_file))
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
@@ -205,7 +205,7 @@ if __name__ == "__main__":
                                 logger.debug("Resolving URL that previously failed.")
                                 r_url, error = resolve_url(url, session)
                                 exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
-                                with open(exp_file, 'a') as f:
+                                with open(str(exp_file), 'a') as f:
                                     exp_writer = csv.writer(f)
                                     exp_writer.writerow(
                                         [len(exp), url, r_url, error, str(datetime.now())])
@@ -216,7 +216,7 @@ if __name__ == "__main__":
                             logger.debug("New URL. Resolving.")
                             r_url, error = resolve_url(url, session)
                             exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
-                            with open(exp_file, 'a') as f:
+                            with open(str(exp_file), 'a') as f:
                                 exp_writer = csv.writer(f)
                                 exp_writer.writerow(
                                         [len(exp), url, r_url, error, str(datetime.now())])
