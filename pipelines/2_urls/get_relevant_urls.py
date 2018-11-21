@@ -206,8 +206,8 @@ if __name__ == "__main__":
                                 r_url, error = resolve_url(url, session)
                                 exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
                                 with open(exp_file, 'a') as f:
-                                    writer = csv.writer(f)
-                                    writer.writerow(
+                                    exp_writer = csv.writer(f)
+                                    exp_writer.writerow(
                                         [len(exp), url, r_url, error, str(datetime.now())])
                                 url = r_url
                             else:
@@ -217,8 +217,8 @@ if __name__ == "__main__":
                             r_url, error = resolve_url(url, session)
                             exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
                             with open(exp_file, 'a') as f:
-                                writer = csv.writer(f)
-                                writer.writerow(
+                                exp_writer = csv.writer(f)
+                                exp_writer.writerow(
                                         [len(exp), url, r_url, error, str(datetime.now())])
                             url = r_url
 
