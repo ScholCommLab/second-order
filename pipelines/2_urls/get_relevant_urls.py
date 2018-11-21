@@ -114,10 +114,10 @@ if __name__ == "__main__":
     # Expanded URLs
     logger.info("Trying to load previously expanded URLs and prepare file stream")
     try:
-        exp = pd.read_csv(exp_file, index_col="short_url")
+        exp = pd.read_csv("expanded_urls.csv", index_col="id")
     except:
         exp = pd.DataFrame(columns=exp_url_headers)
-        exp.index.name = "short_url"
+        exp.index.name = "id"
         exp.to_csv(exp_file, index=True)
 
     # Init publication tracker
@@ -198,26 +198,28 @@ if __name__ == "__main__":
 
                 if not found_url:
                     for url in url_candidates:
-                        if url in exp.index.tolist():
-                            df = exp[exp.index == url]
+                        if url in exp.short_url.tolist():
+                            df = exp[exp.short_url == url]
                             df = df[df['error'].isnull()]
                             if len(df) == 0:
                                 logger.debug("Resolving URL that previously failed.")
                                 r_url, error = resolve_url(url, session)
-                                exp.loc[url] = [r_url, error, str(datetime.now())]
+                                exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
                                 with open(exp_file, 'a') as f:
                                     writer = csv.writer(f)
-                                    writer.writerow([url, r_url, error, str(datetime.now())])
+                                    writer.writerow(
+                                        [len(exp), url, r_url, error, str(datetime.now())])
                                 url = r_url
                             else:
                                 url = df.iloc[0]["resolved_url"]
                         else:
                             logger.debug("New URL. Resolving.")
                             r_url, error = resolve_url(url, session)
-                            exp.loc[url] = [r_url, error, str(datetime.now())]
+                            exp.loc[len(exp)+1] = [url, r_url, error, str(datetime.now())]
                             with open(exp_file, 'a') as f:
                                 writer = csv.writer(f)
-                                writer.writerow([url, r_url, error, str(datetime.now())])
+                                writer.writerow(
+                                        [len(exp), url, r_url, error, str(datetime.now())])
                             url = r_url
 
                         if relevant_url(url, venue_short, terms):
