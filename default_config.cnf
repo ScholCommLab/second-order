@@ -1,5 +1,17 @@
+[input_files]
+raw_tweets: data/input/raw_tweets/
+queries: data/input/queries.csv
+altmetric: data/input/altmetric_news_mentions.csv
+
+[output_files]
+tweets: data/output/tweets/
+twitter_urls: data/output/twitter_urls
+altmetric_urls: data/output/altmetric_urls
+summary_tweets: data/output/summary_tweets.csv 
+summary_urls: data/output/summary_urls.csv
+
 [twitter_keys]
-consumer_key: 
-consumer_secret: 
-access_token: 
-access_token_secret: 
+consumer_key:
+consumer_secret:
+access_token:
+access_token_secret:
