@@ -1,3 +1,4 @@
+data/input/raw_tweets/*.csv
 config.cnf
 data/queries/
 data/refetched/
