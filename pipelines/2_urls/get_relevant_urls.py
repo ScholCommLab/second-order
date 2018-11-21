@@ -120,10 +120,6 @@ if __name__ == "__main__":
         exp.index.name = "short_url"
         exp.to_csv(exp_file, index=True)
 
-    # Open file stream for the expanded URLs
-    f = open(exp_file, 'a')
-    exp_writer = csv.writer(f)
-
     # Init publication tracker
     pub_tracker = PublisherTracker()
 
@@ -159,7 +155,6 @@ if __name__ == "__main__":
         infile.seek(0)
 
         reader = csv.reader(infile)
-
         writer = csv.writer(outfile)
         if not appending_mode:
             writer.writerow(outfile_headers)
@@ -210,6 +205,9 @@ if __name__ == "__main__":
                                 logger.debug("Resolving URL that previously failed.")
                                 r_url, error = resolve_url(url, session)
                                 exp.loc[url] = [r_url, error, str(datetime.now())]
+                                with open(exp_file, 'a') as f:
+                                    writer = csv.writer(f)
+                                    writer.writerow([url, r_url, error, str(datetime.now())])
                                 url = r_url
                             else:
                                 url = df.iloc[0]["resolved_url"]
@@ -217,6 +215,9 @@ if __name__ == "__main__":
                             logger.debug("New URL. Resolving.")
                             r_url, error = resolve_url(url, session)
                             exp.loc[url] = [r_url, error, str(datetime.now())]
+                            with open(exp_file, 'a') as f:
+                                writer = csv.writer(f)
+                                writer.writerow([url, r_url, error, str(datetime.now())])
                             url = r_url
 
                         if relevant_url(url, venue_short, terms):
@@ -236,7 +237,6 @@ if __name__ == "__main__":
                 sys.exit(0)
 
         # Write expanded URLs
-        exp.to_csv(exp_file, index=True)
         infile.close()
         outfile.close()
     f.close()
