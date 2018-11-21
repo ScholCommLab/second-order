@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
+Remove at the end...
+
 1. Read original tweet JSONs.
 2. Filter time window.
 3. Re-fetch truncated tweets.
@@ -25,7 +27,7 @@ import tweepy
 from dateutil.parser import parse
 from tqdm import tqdm
 
-from helpers import *
+from _helpers import *
 
 tqdm.pandas()
 
@@ -45,11 +47,14 @@ def refetch_tweet(tweet_id):
 
     urls = get_tweet_urls(tweet)
     if len(urls) > 0:
-        urls = str(urls)
+        urls = json.dumps(urls)
     else:
         urls = None
 
     return urls, False, True, error
+
+
+input_dir = Path("temp/")
 
 
 if __name__ == "__main__":
@@ -61,9 +66,18 @@ if __name__ == "__main__":
                'refetched', 'error']
 
     # Load config
+    root = Path('../../')
     Config = configparser.ConfigParser()
-    Config.read('../../config.cnf')
+    Config.read(str(root / 'config.cnf'))
 
+    # Load files from disk
+    queries = root / Config.get('input_files', 'queries')
+    output_dir = root / Config.get('output_files', 'tweets')
+
+    queries = load_queries(str(queries))
+    files = input_dir.glob("*.csv")
+
+    # Setup Twitter API
     consumer_key = Config.get('twitter_keys', 'consumer_key')
     consumer_secret = Config.get('twitter_keys', 'consumer_secret')
     access_token = Config.get('twitter_keys', 'access_token')
@@ -74,15 +88,6 @@ if __name__ == "__main__":
     # set up access to the Twitter API
     api = tweepy.API(auth, wait_on_rate_limit=True,
                      wait_on_rate_limit_notify=True)
-
-    # Load files from disk
-    queries = load_queries("../../data/queries.csv")
-
-    data_dir = Path("../../data/")
-    input_dir = data_dir / "tweets/"
-    output_dir = data_dir / "refetched_tweets/"
-
-    files = input_dir.glob("*.csv")
 
     # Iterate over available newspapers
     for infile in files:
