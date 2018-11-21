@@ -110,7 +110,7 @@ if __name__ == "__main__":
     queries = load_queries(str(queries))
 
     input_files = root / Config.get('output_files', 'tweets')
-    
+
     # Expanded URLs
     logger.info("Trying to load previously expanded URLs and prepare file stream")
     try:
@@ -204,13 +204,15 @@ if __name__ == "__main__":
                 if not found_url:
                     for url in url_candidates:
                         if url in exp.index.tolist():
-                            if not pd.isna(exp.loc[url, "error"]):
+                            df = exp.loc[url]
+                            df = df[df.error.isnull()]
+                            if len(df) == 0:
                                 logger.debug("Resolving URL that previously failed.")
                                 r_url, error = resolve_url(url, session)
                                 exp.loc[url] = [r_url, error, str(datetime.now())]
                                 url = r_url
                             else:
-                                url = exp.loc[url, "resolved_url"]
+                                url = df.iloc[0]["resolved_url"]
                         else:
                             logger.debug("New URL. Resolving.")
                             r_url, error = resolve_url(url, session)
