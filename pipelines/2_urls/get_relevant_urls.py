@@ -207,53 +207,62 @@ if __name__ == "__main__":
                 url_candidates = [url for url in url_candidates if 'twitter.com' not in url]
 
                 found_url = None
+                expanded = False
                 # Match with the selected news venue
-
+                urls_to_remove = []
                 for url in url_candidates:
+                    # Check if URL in tweet is relevant
                     if relevant_url(url, venue_short, terms):
                         logger.debug("### {}: Found relevant link in tweet.".format(tweet_id))
                         found_url = url
-                        expanded = False
                         break
+                    # Check if previously resolved URL is relevant
+                    if url in good_exp_urls:
+                        r_url = good_exp_urls[url]
+                        if relevant_url(r_url, venue_short, terms):
+                            logger.debug("### {}: Reusing previous resolve.".format(tweet_id))
+                            found_url = r_url
+                            expanded = True
+                            break
+                        else:
+                            urls_to_remove.append(url)
+                    
+                url_candidates = [url for url in url_candidates if url not in urls_to_remove]
 
                 if not found_url:
                     for url in url_candidates:
-                        c_url, error = None, None
-                        expanded = False
-
+                        r_url, error = None, None
                         # Find candidate URL in existing data or with resolving
-                        if url in good_exp_urls:
-                            logger.debug("### {}: Reusing previous resolve.".format(tweet_id))
-                            c_url = good_exp_urls[url]
-                        elif url in bad_exp_urls:
-                            logger.debug("### {}: Resolving URL that previously failed.".format(tweet_id))
-                            c_url, error = resolve_url(url, session)
+                        if url in bad_exp_urls:
+                            logger.debug(
+                                "### {}: Resolving URL that previously failed.".format(tweet_id))
+                            r_url, error = resolve_url(url, session)
                             expanded = True
 
-                            if c_url:
-                                good_exp_urls[url] = c_url
+                            if r_url:
+                                good_exp_urls[url] = r_url
                                 bad_exp_urls.remove(url)
 
-                                row = [expanded_url_count, url, c_url, error, str(datetime.now())]
+                                row = [expanded_url_count, url, r_url, error, str(datetime.now())]
                                 exp_write_row(str(exp_file), row)
                                 expanded_url_count = expanded_url_count + 1
                         else:
                             logger.debug("### {}: New URL. Resolving.".format(tweet_id))
-                            c_url, error = resolve_url(url, session)
+                            r_url, error = resolve_url(url, session)
                             expanded = True
 
-                            row = [expanded_url_count, url, c_url, error, str(datetime.now())]
+                            row = [expanded_url_count, url, r_url, error, str(datetime.now())]
                             exp_write_row(str(exp_file), row)
                             expanded_url_count = expanded_url_count + 1
 
-                            if c_url:
-                                good_exp_urls[url] = c_url
+                            if r_url:
+                                good_exp_urls[url] = r_url
                             else:
-                                bad_exp_urls.add(url)   
+                                bad_exp_urls.add(url)
 
-                        if c_url:
-                            if relevant_url(c_url, venue_short, terms):
-                                found_url = c_url
+                        if r_url:
+                            if relevant_url(r_url, venue_short, terms):
+                                found_url = r_url
                                 break
 
                 if found_url:
