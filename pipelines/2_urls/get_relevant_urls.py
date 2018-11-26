@@ -58,8 +58,8 @@ class PublisherTracker(object):
 
 
 @sleep_and_retry
-@limits(calls=30, period=1)
-def resolve_url(url, session, timeout=8):
+@limits(calls=5, period=1)
+def resolve_url(url, session, timeout=5):
     try:
         resp = session.get(url, allow_redirects=True, timeout=timeout)
         return resp.url, None
