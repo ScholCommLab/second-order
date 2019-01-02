@@ -27,6 +27,9 @@ import tweepy
 from dateutil.parser import parse
 from tqdm import tqdm
 
+import sys
+sys.path.append("../")
+
 from _helpers import *
 
 tqdm.pandas()
