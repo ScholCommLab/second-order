@@ -52,6 +52,20 @@ def get_urls(urls):
         return []
 
 
+def load_tweets(x):
+    """
+    Load files containing tweets
+    """
+    return pd.read_csv(x,
+                       dtype={
+                           'tweet_id': str,
+                           'user_id': str,
+                           'retweeted_status': str,
+                           'quoted_status': str,
+                           'in_reply_to': str
+                       })
+
+
 # Loading files
 def load_urls(file):
     '''
