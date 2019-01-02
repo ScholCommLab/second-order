@@ -1,8 +1,8 @@
 pipelines/*/temp/
 data/input/raw_tweets/*.csv
-data/output/tweets/*.csv
-data/output/twitter_urls/*.csv
-data/output/altmetric_urls/*.csv
+data/output/tweets.csv
+data/output/twitter_urls.csv
+data/output/altmetric_urls.csv
 
 config.cnf
 data/queries/
