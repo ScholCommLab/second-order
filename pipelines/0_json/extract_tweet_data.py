@@ -20,7 +20,8 @@ if __name__ == "__main__":
     # Load files from disk
     queries = root / Config.get('input_files', 'raw')
     input_dir = root / Config.get('input_files', 'raw_tweets')
-    output_dir = root / Config.get('output_files', 'tweets')
+
+    output_dir = Path("temp/")
 
     queries = load_queries(str(queries))
 
