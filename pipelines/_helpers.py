@@ -52,18 +52,26 @@ def get_urls(urls):
         return []
 
 
+def load_queries(file):
+    '''
+    Load file that contains information about the search queries
+    '''
+    queries = pd.read_csv(file, index_col="id")
+    return queries
+
+
 def load_tweets(x):
     """
     Load files containing tweets
     """
     df = pd.read_csv(x, index_col="id", parse_dates=['posted_on'],
-                       dtype={
-                           'tweet_id': str,
-                           'user_id': str,
-                           'retweeted_status': str,
-                           'quoted_status': str,
-                           'in_reply_to': str
-                       })
+                     dtype={
+        'tweet_id': str,
+        'user_id': str,
+        'retweeted_status': str,
+        'quoted_status': str,
+        'in_reply_to': str
+    })
     return df
 
 
@@ -73,22 +81,22 @@ def load_urls(file):
     Load file that contains tweets & urls
     '''
     df = pd.read_csv(file, index_col="id",
-                       na_values="None",
-                       dtype={'tweet_id': str,
-                              'retweeted_status': str,
-                              'quoted_status': str,
-                              'relevant_url': str,
-                              'cleaned_url': str},
-                       parse_dates=['timestamp'])
+                     na_values="None",
+                     dtype={'tweet_id': str,
+                            'retweeted_status': str,
+                            'quoted_status': str,
+                            'relevant_url': str,
+                            'cleaned_url': str},
+                     parse_dates=['timestamp'])
     return df
 
 
-def load_queries(file):
-    '''
-    Load file that contains information about the search queries
-    '''
-    queries = pd.read_csv(file, index_col="id")
-    return queries
+def load_altmetric(file):
+    """
+    Load file containing altmetric URLs
+    """
+    df = pd.read_csv(file, index_col="id", parse_dates=['posted_on'])
+    return df
 
 
 def clean_url(url, venue=None):
