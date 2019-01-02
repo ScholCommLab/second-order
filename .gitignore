@@ -1,3 +1,4 @@
+pipelines/*/temp/
 data/input/raw_tweets/*.csv
 data/output/tweets/*.csv
 data/output/twitter_urls/*.csv
