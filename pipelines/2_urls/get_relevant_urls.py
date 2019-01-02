@@ -58,7 +58,7 @@ class PublisherTracker(object):
 
 
 @sleep_and_retry
-@limits(calls=5, period=1)
+@limits(calls=1, period=1)
 def resolve_url(url, session, timeout=5):
     try:
         resp = session.get(url, allow_redirects=True, timeout=timeout)
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     Config.read(str(root / 'config.cnf'))
 
     # Load files from disk
-    queries = str(root / Config.get('input_files', 'queries'))
+    queries = root / Config.get('input_files', 'queries')
     queries = load_queries(str(queries))
 
     input_files = root / Config.get('output_files', 'tweets')

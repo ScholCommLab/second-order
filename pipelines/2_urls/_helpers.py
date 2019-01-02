@@ -8,15 +8,36 @@ import pandas as pd
 import urltools
 
 
-# Loading individual tweets and manipulate them
-def load_json(x):
+def load_tweets(x):
+    """
+    Load files containing tweets
+    """
+    return pd.read_csv(x,
+                       dtype={
+                           'tweet_id': str,
+                           'user_id': str,
+                           'retweeted_status': str,
+                           'quoted_status': str,
+                           'in_reply_to': str
+                       })
+
+
+# Loading files
+def load_urls(file):
     '''
-    Load Tweet JSON
+    Load file that contains tweets & urls
     '''
-    try:
-        return json.loads(x, strict=False)
-    except:
-        return None
+    urls = pd.read_csv(file,
+                       na_values="None",
+                       dtype={'tweet_id': str,
+                              'retweeted_status': str,
+                              'quoted_status': str,
+                              'relevant_url': str,
+                              'cleaned_url': str},
+                       parse_dates=['timestamp'])
+    # urls = urls.drop_duplicates()
+    # urls = urls.set_index("tweet_id")
+    return urls
 
 
 def load_queries(file):
@@ -27,7 +48,16 @@ def load_queries(file):
     return queries
 
 
-# URL operations
+def load_json(x):
+    '''
+    Load Tweet JSON
+    '''
+    try:
+        return json.loads(x, strict=False)
+    except:
+        return None
+
+
 def clean_url(url, venue=None):
     '''
     Strip out trailing slashes, URL query variables, anchors, etc.
@@ -41,7 +71,7 @@ def clean_url(url, venue=None):
 
     try:
         up = urltools.extract(url)
-        url = up.domain + "." + up.tld + up.path
+        url = up.subdomain + "." + up.domain + "." + up.tld + up.path
         url = urltools.normalize(url)
         return url
     except:
@@ -63,13 +93,3 @@ def relevant_url(url, venue, terms):
         if "/" + term + "/" in url:
             return True
     return False
-
-
-def merge_urls(row):
-    '''
-    If relevant URL exists return it, otherwise
-    use retweeted URL
-    '''
-    if not pd.isna(row['relevant_url']):
-        return row['relevant_url']
-    return row['retweet_url']
