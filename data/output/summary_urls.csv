@@ -1,0 +1,13 @@
+venue,found tweets,found urls,relevant urls [%],unique urls
+bostonglobe,16468,4182.0,25.4,226.0
+chicago,830,0.0,0.0,0.0
+foxnews,229911,149869.0,65.2,3475.0
+iflscience,184242,0.0,0.0,0.0
+latimes,125809,84034.0,66.8,2066.0
+nytimes,1124602,686997.0,60.9,4569.0
+sfchronicle,9863,4984.0,50.5,325.0
+slate,1873,646.0,34.5,219.0
+theglobeandmail,26130,4897.0,18.7,176.0
+theguardian,78972,44452.0,56.3,2113.0
+washingtonpost,1613328,623299.0,38.6,4619.0
+wired,172956,3822.0,1.4,276.0
