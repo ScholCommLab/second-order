@@ -54,9 +54,6 @@ def refetch_tweet(tweet_id):
     return urls, False, True, error
 
 
-input_dir = Path("temp/")
-
-
 if __name__ == "__main__":
     min_date = datetime(2016, 9, 1)
     max_date = datetime(2017, 9, 1)
@@ -70,12 +67,13 @@ if __name__ == "__main__":
     Config = configparser.ConfigParser()
     Config.read(str(root / 'config.cnf'))
 
-    # Load files from disk
     queries = root / Config.get('input_files', 'queries')
-    output_dir = root / Config.get('output_files', 'tweets')
-
     queries = load_queries(str(queries))
-    files = input_dir.glob("*.csv")
+
+    tweets_dir = Path("temp/")
+    input_files = tweets_dir.glob("*.csv")
+
+    output_dir = root / Config.get('output_files', 'tweets')
 
     # Setup Twitter API
     consumer_key = Config.get('twitter_keys', 'consumer_key')
@@ -90,8 +88,8 @@ if __name__ == "__main__":
                      wait_on_rate_limit_notify=True)
 
     # Iterate over available newspapers
-    for infile in files:
-        outfile = output_dir / infile.name
+    for infile in input_files:
+        outfile = out_dir / infile.name
         if outfile.exists():
             print("{} already exists. skipping".format(outfile))
             continue
@@ -123,3 +121,16 @@ if __name__ == "__main__":
                             row.append(None)
 
                         writer.writerow(row)
+
+    temp_files = list(out_dir.glob("*.csv"))
+
+    dfs = []
+    for file in tqdm(temp_files):
+        df = load_tweets(file)
+        df['venue'] = file.name.split("/")[-1].split(" ")[0]
+        dfs.append(df)
+    tweets = pd.concat(dfs)
+    tweets.drop("Unnamed: 0", inplace=True, axis=1)
+    tweets.reset_index(drop=True)
+    tweets.index.name = "id"
+    tweets.to_csv(output_dir)
