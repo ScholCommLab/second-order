@@ -20,6 +20,9 @@ from pathlib import Path
 from tqdm import tqdm
 from dateutil.parser import parse
 
+import sys
+sys.path.append("../")
+
 from _helpers import *
 
 if __name__ == "__main__":
