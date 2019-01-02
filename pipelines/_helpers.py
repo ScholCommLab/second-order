@@ -52,20 +52,35 @@ def get_urls(urls):
         return []
 
 
+def load_tweets(x):
+    """
+    Load files containing tweets
+    """
+    df = pd.read_csv(x, index_col="id", parse_dates=['posted_on'],
+                       dtype={
+                           'tweet_id': str,
+                           'user_id': str,
+                           'retweeted_status': str,
+                           'quoted_status': str,
+                           'in_reply_to': str
+                       })
+    return df
+
+
 # Loading files
 def load_urls(file):
     '''
     Load file that contains tweets & urls
     '''
-    urls = pd.read_csv(file,
+    df = pd.read_csv(file, index_col="id",
                        na_values="None",
                        dtype={'tweet_id': str,
-                              'retweet_id': str,
+                              'retweeted_status': str,
+                              'quoted_status': str,
                               'relevant_url': str,
-                              'clean_url': str})
-    urls = urls.drop_duplicates()
-    urls = urls.set_index("tweet_id")
-    return urls
+                              'cleaned_url': str},
+                       parse_dates=['timestamp'])
+    return df
 
 
 def load_queries(file):
@@ -76,7 +91,6 @@ def load_queries(file):
     return queries
 
 
-# URL operations
 def clean_url(url, venue=None):
     '''
     Strip out trailing slashes, URL query variables, anchors, etc.
@@ -90,19 +104,22 @@ def clean_url(url, venue=None):
 
     try:
         up = urltools.extract(url)
-        url = up.domain + "." + up.tld + up.path
+        url = up.subdomain + "." + up.domain + "." + up.tld + up.path
         url = urltools.normalize(url)
         return url
     except:
         raise
 
 
-def relevant_url(url, terms):
+def relevant_url(url, venue, terms):
     '''
     Check if URL contains one of the search terms for each news venue
     in the form "/search_term/" (which would typically be a section)
     '''
     if pd.isna(url):
+        return False
+
+    if venue not in url:
         return False
 
     for term in terms:

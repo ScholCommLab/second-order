@@ -4,8 +4,10 @@ import pandas as pd
 from dateutil.parser import parse
 from tqdm import tqdm
 
-from _helpers import *
+import sys
+sys.path.append("../")
 
+from _helpers import *
 
 if __name__ == "__main__":
     headers = ['tweet_id', 'posted_on', 'user_id', 'retweeted_status',
