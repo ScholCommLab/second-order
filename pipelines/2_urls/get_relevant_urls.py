@@ -29,6 +29,9 @@ from dateutil.parser import parse
 from ratelimit import limits, sleep_and_retry
 from tqdm import tqdm
 
+import sys
+sys.path.append("../")
+
 from _helpers import *
 
 tqdm.pandas()
@@ -115,7 +118,8 @@ if __name__ == "__main__":
     queries = root / Config.get('input_files', 'queries')
     queries = load_queries(str(queries))
 
-    input_files = root / Config.get('output_files', 'tweets')
+    temp_tweets = root / "pipelines/2_urls/temp/"
+    input_files = list(temp_tweets.glob("*.csv"))
 
     # Expanded URLs
     logger.info("# Trying to load previously expanded URLs")
@@ -141,8 +145,7 @@ if __name__ == "__main__":
     # Init publication tracker
     pub_tracker = PublisherTracker()
 
-    files = input_files.glob("*.csv")
-    for infile in files:
+    for infile in input_files:
         logger.info("## Processing {} ".format(infile.name))
         # Skip files that start with _ (IFLscience, Chicago-Suntimes)
         if infile.name[0] == "_":
@@ -226,7 +229,7 @@ if __name__ == "__main__":
                             break
                         else:
                             urls_to_remove.append(url)
-                    
+
                 url_candidates = [url for url in url_candidates if url not in urls_to_remove]
 
                 if not found_url:
